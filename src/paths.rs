@@ -20,4 +20,5 @@ define_paths!(
     BG     = IN/"bg.mp4"
     TEXTS  = IN/"texts.txt"
     VOICES = TEMP/"voices"
+    FINAL  = OUT/"final.mp4"
 );

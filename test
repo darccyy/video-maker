@@ -1,0 +1,14 @@
+#!/bin/sh
+
+out='assets/out/final.mp4'
+
+rm $out
+
+cargo run &&
+
+if test -f $out; then
+  nohup xdg-open $out > /dev/null
+else
+  echo "Error: Output file was not created"
+fi
+
