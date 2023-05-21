@@ -1,6 +1,6 @@
 use std::{io::Cursor, time::Duration};
 
-pub fn fetch_voice_bytes(text: &str) -> Result<Vec<u8>, reqwest::Error> {
+pub fn get_voice_bytes(text: &str) -> Result<Vec<u8>, reqwest::Error> {
     let language = "en-UK";
     let gender = "male";
     let pitch = 0.5;

@@ -1,141 +1,112 @@
+pub mod config;
 pub mod paths;
 
-mod fetch;
+mod reddit;
+mod video;
 mod voice;
 
-pub use fetch::fetch_texts;
-pub use paths::{check_assets_input, clean_assets_output};
-pub use voice::{fetch_voice_bytes, get_audio_duration};
+use config::Config;
+use paths::{check_assets_input, clean_assets_output};
+use voice::{get_audio_duration, get_voice_bytes};
 
-/// Format timestamp (hh:mm:ss) from time in seconds
-///
-/// TODO Add milliseconds
-pub fn timestamp_from_seconds(seconds: f32) -> String {
-    let mut seconds = seconds as u32;
+use std::{fs, process::Command, time::Duration};
 
-    let mut minutes = seconds / 60;
-    seconds = seconds % 60;
+pub fn create_video(config: Config) {
+    // Clean and check assets directory
+    clean_assets_output().expect("Failed to clean assets output");
+    if let Some(missing_file) = check_assets_input().expect("Failed to check missing input files") {
+        panic!("Input files/folders missing: {}", missing_file);
+    };
 
-    let hours = minutes / 60;
-    minutes = minutes % 60;
+    println!("\n======== CONTENT ========");
 
-    format!(
-        "{hh}:{mm}:{ss}",
-        hh = hours,
-        mm = leading_zeros(minutes, 2),
-        ss = leading_zeros(seconds, 2)
-    )
-}
+    let texts = reddit::get_posts(config.reddit).expect("Error fetching texts");
 
-/// Add leading zero to number, if less than desired digit length
-fn leading_zeros(number: u32, length: usize) -> String {
-    let number = number.to_string();
-    if number.len() < length {
-        "0".repeat(length - number.len()) + &number
+    println!("Successfully fetched content - {} lines", texts.len());
+
+    println!("\n======== VOICE ==========");
+
+    let mut voices = Vec::new();
+    let mut duration_total = Duration::ZERO;
+    for (i, text) in texts.iter().enumerate() {
+        println!("Creating voice file for '{}'", text);
+
+        let bytes = get_voice_bytes(&text).expect("Error fetching voice audio");
+
+        let path = format!("{}/{}.mp3", paths::VOICES, i);
+        fs::write(&path, &bytes).expect("Failed to write audio file of voice");
+
+        let duration = get_audio_duration(&bytes).expect("Failed to parse audio duration");
+
+        voices.push((path, duration, text));
+
+        duration_total += duration;
+    }
+
+    println!("\n======== COMMAND ========");
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-y", "-loglevel", "error", "-i", paths::BG]);
+
+    for (path, ..) in &voices {
+        cmd.args(["-i", &path]);
+    }
+
+    cmd.args(["-map", "0:v"]);
+    for (i, _) in voices.iter().enumerate() {
+        cmd.args(["-map", &format!("{}:a", i + 1)]);
+    }
+
+    let mut filter = String::new();
+    for (i, _) in voices.iter().enumerate() {
+        filter.push_str(&format!("[{}:a]", i + 1));
+    }
+    cmd.args([
+        "-filter_complex",
+        &format!("{}concat=n={}:v=0:a=1", filter, voices.len()),
+    ]);
+
+    let mut filters = Vec::new();
+    let mut duration_total = 0.0;
+    for (_, duration, text) in &voices {
+        let start = duration_total;
+        duration_total += duration.as_secs_f32();
+        let end = duration_total;
+
+        filters.push(video::text_filter(text, start, end));
+    }
+    cmd.args(["-vf", &filters.join(",")]);
+
+    cmd.args([
+        "-ss",
+        "00:00:00",
+        "-to",
+        &video::timestamp_from_seconds(duration_total + 1.0),
+    ]);
+
+    cmd.args(["-q:v", "0"]);
+    // cmd.args(["-c:v", "copy"]);
+    cmd.arg(paths::FINAL);
+
+    println!("{:#?}", cmd);
+    println!(
+        "ffmpeg {}",
+        cmd.get_args()
+            .map(|x| x.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+
+    println!("\n======== RESULT ==========");
+    println!("Rendering with ffmpeg...");
+
+    let result = cmd.output().expect("Run command");
+
+    if !result.stderr.is_empty() {
+        eprintln!("FFMPEG Error");
+        eprintln!("{}", String::from_utf8_lossy(&result.stderr));
+        std::process::exit(1);
     } else {
-        number
+        println!("\x1b[1mSuccess!\x1b[0m\n");
     }
-}
-
-fn sanitize_shell_characters(text: &str) -> String {
-    text.replace('\\', "\\\\")
-        .replace('"', "\"\"")
-        .replace('\'', "''")
-        .replace('%', "\\%")
-        .replace(':', "\\:")
-        .replace('&', "\\&")
-}
-
-pub fn text_filter(text: &str, start: f32, end: f32) -> String {
-    // Replace special characters with escaped version
-    let text = sanitize_shell_characters(text);
-    // Wrap text to max width
-    let text = wrap_text(&text, 60);
-
-    let options = [
-        // Font settings
-        ("font", "'Serif'"),
-        ("fontcolor", "white"),
-        ("fontsize", "32"),
-        // Text background
-        ("box", "1"),
-        ("boxborderw", "8"),
-        ("boxcolor", "black@0.7"),
-        // Center text on canvas
-        ("x", "(w-text_w)/2"),
-        ("y", "(h-text_h)/2"),
-        // Timing to display text
-        ("enable", &format!("'between(t, {start}, {end})'")),
-        // Prevent special characters in text from breaking command
-        ("expansion", "none"),
-        // Text to render
-        ("text", &format!("'{}'", text)),
-    ];
-
-    // Convert to `key=value` syntax
-    let options: Vec<_> = options
-        .into_iter()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect();
-    // Create filter
-    format!("drawtext={}", options.join(":"))
-}
-
-/// Wrap text to fit within a maximum width (number of characters)
-fn wrap_text(text: &str, max_width: usize) -> String {
-    // Split into 'words'
-    // Words longer than `max_width` will be split into two 'words', with a dash appended to all
-    // non-final words
-    let mut words = Vec::new();
-    for word in text.split(' ') {
-        // Divide word into chunks, with a max width
-        let chars: Vec<char> = word.chars().collect();
-        let chunks = chars.chunks(max_width - 1);
-        // Calculate amount of chunks, without consuming iterator
-        let chunk_count = chars.len() / (max_width - 1);
-
-        for (i, chunk) in chunks.enumerate() {
-            // Convert to string
-            let mut chunk = chunk.iter().collect::<String>();
-            // Add dash, if not final chunk
-            if i + 1 <= chunk_count {
-                chunk.push('-');
-            }
-            // Add to words
-            words.push(chunk);
-        }
-    }
-
-    // Create lines of text
-    let mut lines = Vec::new();
-    let mut line = String::new();
-
-    for word in words {
-        // Length of line, if word is added
-        let future_len = if line.is_empty() {
-            // Only word length
-            // This should never be longer than `max_width`, due to chunking earlier
-            word.len()
-        } else {
-            // Line length, with new word, and another space character
-            line.len() + 1 + word.len()
-        };
-
-        // Create new line, if adding word to line would otherwise make line longer than `max_width`
-        if future_len >= max_width {
-            lines.push(line);
-            line = String::new();
-        }
-
-        // Add space, if not first word in line
-        if !line.is_empty() {
-            line.push(' ');
-        }
-        // Add word to line
-        line.push_str(&word);
-    }
-
-    // Join lines
-    lines.push(line);
-    lines.join("\n")
 }

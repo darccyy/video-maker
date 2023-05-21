@@ -1,23 +1,25 @@
 mod json;
 
-use json::Subreddit;
-
-use self::json::ChildData;
+use self::json::{ChildData, Subreddit};
+use crate::config::RedditConfig;
 
 const MAX_TEXT_LENGTH: usize = 100;
 
-pub fn fetch_texts() -> Result<Vec<String>, reqwest::Error> {
-    let subreddit = "dadjokes";
-    let sort = "top";
-    let time = "week";
-    let count = 100;
+const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5666.197 Safari/537.36";
 
-    let user_agent = "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5666.197 Safari/537.36";
+pub fn get_posts(config: RedditConfig) -> Result<Vec<String>, reqwest::Error> {
+    let RedditConfig {
+        subreddit,
+        sort,
+        time,
+    } = config;
+
+    let count = 100;
 
     let url = format!("https://reddit.com/r/{subreddit}/{sort}.json?t={time}&count={count}");
 
     let client = reqwest::blocking::Client::builder()
-        .user_agent(user_agent)
+        .user_agent(USER_AGENT)
         .build()
         .expect("Failed to build request client");
 
