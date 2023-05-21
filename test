@@ -7,6 +7,8 @@ rm $out
 cargo run &&
 
 if test -f $out; then
+  echo "Press ENTER to start video..."
+  read
   nohup xdg-open $out > /dev/null
 else
   echo "Error: Output file was not created"

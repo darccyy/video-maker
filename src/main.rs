@@ -1,8 +1,8 @@
-use std::{fs, process::Command};
+use std::{fs, process::Command, time::Duration};
 
 use video_maker::{
     check_assets_input, clean_assets_output, fetch_voice_bytes, get_audio_duration, get_texts,
-    paths,
+    paths, timestamp_from_seconds,
 };
 
 fn main() {
@@ -17,19 +17,21 @@ fn main() {
     let texts = get_texts().expect("Failed to read texts file");
 
     let mut voices = Vec::new();
-
+    let mut duration_total = Duration::ZERO;
     for (i, text) in texts.iter().enumerate() {
         println!("Creating voice file for '{}'", text);
 
         let bytes = fetch_voice_bytes(&text).expect("Error fetching voice audio");
 
-        let path = format!("{}/{}.mp4", paths::VOICES, i);
+        let path = format!("{}/{}.mp3", paths::VOICES, i);
         fs::write(&path, &bytes).expect("Failed to write audio file of voice");
 
         let duration = get_audio_duration(&bytes).expect("Failed to parse audio duration");
         println!("Duration: {}ms", duration.as_millis());
 
         voices.push((path, duration));
+
+        duration_total += duration;
     }
 
     println!("\n======== COMMAND ========");
@@ -42,14 +44,40 @@ fn main() {
     }
 
     cmd.args(["-map", "0:v"]);
-
     for (i, _) in voices.iter().enumerate() {
         cmd.args(["-map", &format!("{}:a", i + 1)]);
     }
 
+    let mut filter = String::new();
+    for (i, _) in voices.iter().enumerate() {
+        filter.push_str(&format!("[{}:a]", i + 1));
+    }
+    cmd.args([
+        "-filter_complex",
+        &format!("{}concat=n={}:v=0:a=1", filter, voices.len()),
+    ]);
+
+    let duration = voices
+        .iter()
+        .map(|(_, duration)| duration)
+        .sum::<Duration>()
+        .as_secs_f32()
+        + 1.0;
+    cmd.args(["-ss", "00:00:00", "-to", &timestamp_from_seconds(duration)]);
+
+    cmd.args(["-q:v", "0"]);
+    // cmd.args(["-c:v", "copy"]);
+    // cmd.arg("-shortest");
     cmd.arg(paths::FINAL);
 
     println!("{:#?}", cmd);
+    println!(
+        "ffmpeg {}",
+        cmd.get_args()
+            .map(|x| x.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
     println!("\n======== RESULT ==========");
 
     let result = cmd.output().expect("Run command");

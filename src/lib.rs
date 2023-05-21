@@ -37,3 +37,33 @@ pub fn get_texts() -> Result<Vec<String>, io::Error> {
         .map(String::from)
         .collect())
 }
+
+/// Format timestamp (hh:mm:ss) from time in seconds
+///
+/// TODO Add milliseconds
+pub fn timestamp_from_seconds(seconds: f32) -> String {
+    let mut seconds = seconds as u32;
+
+    let mut minutes = seconds / 60;
+    seconds = seconds % 60;
+
+    let hours = minutes / 60;
+    minutes = minutes % 60;
+
+    format!(
+        "{hh}:{mm}:{ss}",
+        hh = hours,
+        mm = leading_zeros(minutes, 2),
+        ss = leading_zeros(seconds, 2)
+    )
+}
+
+/// Add leading zero to number, if less than desired digit length
+fn leading_zeros(number: u32, length: usize) -> String {
+    let number = number.to_string();
+    if number.len() < length {
+        "0".repeat(length - number.len()) + &number
+    } else {
+        number
+    }
+}
