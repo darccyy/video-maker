@@ -2,7 +2,7 @@ use std::{fs, process::Command, time::Duration};
 
 use video_maker::{
     check_assets_input, clean_assets_output, fetch_voice_bytes, get_audio_duration, get_texts,
-    paths, timestamp_from_seconds,
+    paths, text_filter, timestamp_from_seconds,
 };
 
 fn main() {
@@ -29,7 +29,7 @@ fn main() {
         let duration = get_audio_duration(&bytes).expect("Failed to parse audio duration");
         println!("Duration: {}ms", duration.as_millis());
 
-        voices.push((path, duration));
+        voices.push((path, duration, text));
 
         duration_total += duration;
     }
@@ -39,7 +39,7 @@ fn main() {
     let mut cmd = Command::new("ffmpeg");
     cmd.args(["-y", "-loglevel", "error", "-i", paths::BG]);
 
-    for (path, _) in &voices {
+    for (path, ..) in &voices {
         cmd.args(["-i", &path]);
     }
 
@@ -57,13 +57,23 @@ fn main() {
         &format!("{}concat=n={}:v=0:a=1", filter, voices.len()),
     ]);
 
-    let duration = voices
-        .iter()
-        .map(|(_, duration)| duration)
-        .sum::<Duration>()
-        .as_secs_f32()
-        + 1.0;
-    cmd.args(["-ss", "00:00:00", "-to", &timestamp_from_seconds(duration)]);
+    let mut filters = Vec::new();
+    let mut duration_total = 0.0;
+    for (_, duration, text) in &voices {
+        let start = duration_total;
+        duration_total += duration.as_secs_f32();
+        let end = duration_total;
+
+        filters.push(text_filter(text, start, end));
+    }
+    cmd.args(["-vf", &filters.join(",")]);
+
+    cmd.args([
+        "-ss",
+        "00:00:00",
+        "-to",
+        &timestamp_from_seconds(duration_total + 1.0),
+    ]);
 
     cmd.args(["-q:v", "0"]);
     // cmd.args(["-c:v", "copy"]);

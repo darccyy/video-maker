@@ -67,3 +67,93 @@ fn leading_zeros(number: u32, length: usize) -> String {
         number
     }
 }
+
+pub fn text_filter(text: &str, start: f32, end: f32) -> String {
+    // Wrap text to max width
+    let text = wrap_text(text, 60);
+
+    let options = [
+        // Font settings
+        ("font", "'Serif'"),
+        ("fontcolor", "white"),
+        ("fontsize", "28"),
+        // Text background
+        ("box", "1"),
+        ("boxborderw", "5"),
+        ("boxcolor", "black@0.6"),
+        // Center text on canvas
+        ("x", "(w-text_w)/2"),
+        ("y", "(h-text_h)/2"),
+        // Timing to display text
+        ("enable", &format!("'between(t, {start}, {end})'")),
+        // Text to render
+        ("text", &format!("'{}'", text)),
+    ];
+
+    // Convert to `key=value` syntax
+    let options: Vec<_> = options
+        .into_iter()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect();
+    // Create filter
+    format!("drawtext={}", options.join(":"))
+}
+
+/// Wrap text to fit within a maximum width (number of characters)
+fn wrap_text(text: &str, max_width: usize) -> String {
+    // Split into 'words'
+    // Words longer than `max_width` will be split into two 'words', with a dash appended to all
+    // non-final words
+    let mut words = Vec::new();
+    for word in text.split(' ') {
+        // Divide word into chunks, with a max width
+        let chars: Vec<char> = word.chars().collect();
+        let chunks = chars.chunks(max_width - 1);
+        // Calculate amount of chunks, without consuming iterator
+        let chunk_count = chars.len() / (max_width - 1);
+
+        for (i, chunk) in chunks.enumerate() {
+            // Convert to string
+            let mut chunk = chunk.iter().collect::<String>();
+            // Add dash, if not final chunk
+            if i + 1 <= chunk_count {
+                chunk.push('-');
+            }
+            // Add to words
+            words.push(chunk);
+        }
+    }
+
+    // Create lines of text
+    let mut lines = Vec::new();
+    let mut line = String::new();
+
+    for word in words {
+        // Length of line, if word is added
+        let future_len = if line.is_empty() {
+            // Only word length
+            // This should never be longer than `max_width`, due to chunking earlier
+            word.len()
+        } else {
+            // Line length, with new word, and another space character
+            line.len() + 1 + word.len()
+        };
+
+        // Create new line, if adding word to line would otherwise make line longer than `max_width`
+        if future_len >= max_width {
+            lines.push(line);
+            line = String::new();
+        }
+
+        // Add space, if not first word in line
+        if !line.is_empty() {
+            line.push(' ');
+        }
+        // Add word to line
+        line.push_str(&word);
+    }
+
+    // Join lines
+    lines.push(line);
+    lines.join("\n")
+}
