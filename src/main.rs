@@ -12,11 +12,12 @@ fn main() {
         panic!("Input files/folders missing: {}", missing_file);
     };
 
-    println!("\n======== VOICE ==========");
+    println!("\n======== CONTENT ========");
 
     let texts = fetch_texts().expect("Error fetching texts");
+    println!("Successfully fetched content - {} lines", texts.len());
 
-    // let texts = get_texts().expect("Failed to read texts file");
+    println!("\n======== VOICE ==========");
 
     let mut voices = Vec::new();
     let mut duration_total = Duration::ZERO;
@@ -29,7 +30,6 @@ fn main() {
         fs::write(&path, &bytes).expect("Failed to write audio file of voice");
 
         let duration = get_audio_duration(&bytes).expect("Failed to parse audio duration");
-        println!("Duration: {}ms", duration.as_millis());
 
         voices.push((path, duration, text));
 
@@ -79,7 +79,6 @@ fn main() {
 
     cmd.args(["-q:v", "0"]);
     // cmd.args(["-c:v", "copy"]);
-    // cmd.arg("-shortest");
     cmd.arg(paths::FINAL);
 
     println!("{:#?}", cmd);
@@ -90,7 +89,9 @@ fn main() {
             .collect::<Vec<_>>()
             .join(" ")
     );
+
     println!("\n======== RESULT ==========");
+    println!("Rendering with ffmpeg...");
 
     let result = cmd.output().expect("Run command");
 

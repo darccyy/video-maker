@@ -1,10 +1,12 @@
 use std::{io::Cursor, time::Duration};
 
 pub fn fetch_voice_bytes(text: &str) -> Result<Vec<u8>, reqwest::Error> {
-    let language = "en-GB";
+    let language = "en-UK";
     let gender = "male";
+    let pitch = 0.5;
+    let rate = 0.5;
 
-    let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch=0.5&rate=0.5&volume=1&key=kvfbSITh&gender={gender}");
+    let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 
     let response = reqwest::blocking::get(&url)?;
 

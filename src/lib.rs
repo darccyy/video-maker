@@ -37,24 +37,37 @@ fn leading_zeros(number: u32, length: usize) -> String {
     }
 }
 
+fn sanitize_shell_characters(text: &str) -> String {
+    text.replace('\\', "\\\\")
+        .replace('"', "\"\"")
+        .replace('\'', "''")
+        .replace('%', "\\%")
+        .replace(':', "\\:")
+        .replace('&', "\\&")
+}
+
 pub fn text_filter(text: &str, start: f32, end: f32) -> String {
+    // Replace special characters with escaped version
+    let text = sanitize_shell_characters(text);
     // Wrap text to max width
-    let text = wrap_text(text, 60);
+    let text = wrap_text(&text, 60);
 
     let options = [
         // Font settings
         ("font", "'Serif'"),
         ("fontcolor", "white"),
-        ("fontsize", "28"),
+        ("fontsize", "32"),
         // Text background
         ("box", "1"),
-        ("boxborderw", "5"),
-        ("boxcolor", "black@0.6"),
+        ("boxborderw", "8"),
+        ("boxcolor", "black@0.7"),
         // Center text on canvas
         ("x", "(w-text_w)/2"),
         ("y", "(h-text_h)/2"),
         // Timing to display text
         ("enable", &format!("'between(t, {start}, {end})'")),
+        // Prevent special characters in text from breaking command
+        ("expansion", "none"),
         // Text to render
         ("text", &format!("'{}'", text)),
     ];

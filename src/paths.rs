@@ -20,8 +20,9 @@ define_paths!(
     OUT    = ASSETS/"out"
     TEMP   = ASSETS/"temp"
     BG     = IN/"bg.mp4"
-    VOICES = TEMP/"voices"
     FINAL  = OUT/"final.mp4"
+    VOICES = TEMP/"voices"
+    FILTER = TEMP/"filter.txt"
 );
 
 /// Folders that may already exist, they should be recreated empty
