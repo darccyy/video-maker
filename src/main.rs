@@ -1,7 +1,7 @@
 use std::{fs, process::Command, time::Duration};
 
 use video_maker::{
-    check_assets_input, clean_assets_output, fetch_voice_bytes, get_audio_duration, get_texts,
+    check_assets_input, clean_assets_output, fetch_texts, fetch_voice_bytes, get_audio_duration,
     paths, text_filter, timestamp_from_seconds,
 };
 
@@ -14,7 +14,9 @@ fn main() {
 
     println!("\n======== VOICE ==========");
 
-    let texts = get_texts().expect("Failed to read texts file");
+    let texts = fetch_texts().expect("Error fetching texts");
+
+    // let texts = get_texts().expect("Failed to read texts file");
 
     let mut voices = Vec::new();
     let mut duration_total = Duration::ZERO;
