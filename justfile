@@ -1,2 +1,2 @@
-test:
-	sh test
+run:
+	sh run

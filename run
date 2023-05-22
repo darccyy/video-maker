@@ -2,10 +2,6 @@
 
 out='assets/out/final.mp4'
 
-if test -f $out; then
-  rm $out
-fi
-
 cargo run &&
 
 if test -f $out; then
