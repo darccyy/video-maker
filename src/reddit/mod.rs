@@ -3,8 +3,8 @@ mod json;
 use self::json::{post, subreddit};
 use crate::ToTextFrames;
 
-const MAX_TEXT_LENGTH: usize = 1000;
-const MAX_ITEM_COUNT: usize = 100;
+const MAX_TEXT_LENGTH: usize = 300;
+const MAX_ITEM_COUNT: usize = 1000;
 
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5666.197 Safari/537.36";
 

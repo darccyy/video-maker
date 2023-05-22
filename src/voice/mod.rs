@@ -1,10 +1,14 @@
 use std::{io::Cursor, time::Duration};
 
-pub fn get_voice_bytes(text: &str) -> Result<Vec<u8>, reqwest::Error> {
-    let language = "en-UK";
-    let gender = "male";
-    let pitch = 0.5;
-    let rate = 0.5;
+use crate::config::VoiceConfig;
+
+pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Result<Vec<u8>, reqwest::Error> {
+    let VoiceConfig {
+        language,
+        gender,
+        pitch,
+        rate,
+    } = config;
 
     let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 

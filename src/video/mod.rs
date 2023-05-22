@@ -47,11 +47,11 @@ pub fn text_filter(text: &str, start: f32, end: f32) -> String {
         // Font settings
         ("font", "'Serif'"),
         ("fontcolor", "white"),
-        ("fontsize", "32"),
+        ("fontsize", "42"),
         // Text background
         ("box", "1"),
-        ("boxborderw", "8"),
-        ("boxcolor", "black@0.7"),
+        ("boxborderw", "12"),
+        ("boxcolor", "black@0.8"),
         // Center text on canvas
         ("x", "(w-text_w)/2"),
         ("y", "(h-text_h)/2"),

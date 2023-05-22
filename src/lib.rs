@@ -5,6 +5,7 @@ pub mod reddit;
 mod video;
 mod voice;
 
+use config::Config;
 use paths::{check_assets_input, clean_assets_output};
 use voice::{get_audio_duration, get_voice_bytes};
 
@@ -23,7 +24,7 @@ impl<T: ToTextFrames> ToTextFrames for Vec<T> {
     }
 }
 
-pub fn create_video(texts: Vec<String>) {
+pub fn create_video(texts: Vec<String>, config: &Config) {
     // Clean and check assets directory
     clean_assets_output().expect("Failed to clean assets output");
     if let Some(missing_file) = check_assets_input().expect("Failed to check missing input files") {
@@ -37,7 +38,7 @@ pub fn create_video(texts: Vec<String>) {
     for (i, text) in texts.iter().enumerate() {
         println!("Creating voice file for '{}'", text);
 
-        let bytes = get_voice_bytes(&text).expect("Error fetching voice audio");
+        let bytes = get_voice_bytes(&text, &config.voice).expect("Error fetching voice audio");
 
         let path = format!("{}/{}.mp3", paths::VOICES, i);
         fs::write(&path, &bytes).expect("Failed to write audio file of voice");
@@ -52,7 +53,7 @@ pub fn create_video(texts: Vec<String>) {
     println!("\n======== COMMAND ========");
 
     let mut cmd = Command::new("ffmpeg");
-    cmd.args(["-y", "-loglevel", "error", "-i", paths::BG]);
+    cmd.args(["-loglevel", "error", "-i", paths::BG]);
 
     for (path, ..) in &voices {
         cmd.args(["-i", &path]);
@@ -87,7 +88,7 @@ pub fn create_video(texts: Vec<String>) {
         "-ss",
         "00:00:00",
         "-to",
-        &video::timestamp_from_seconds(duration_total + 1.0),
+        &video::timestamp_from_seconds(duration_total + 2.0),
     ]);
 
     cmd.args(["-q:v", "0"]);

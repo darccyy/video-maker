@@ -1,31 +1,31 @@
+use video_maker::config::{Config, VideoConfig, VoiceConfig};
+use video_maker::create_video;
 use video_maker::reddit;
 use video_maker::ToTextFrames;
-use video_maker::{
-    config::{Config, VideoConfig, VoiceConfig},
-    create_video,
-};
 
 fn main() {
+    println!("====== VIDEO-MAKER ======");
+
     let texts = get_reddit_texts();
 
-    #[allow(unused_variables)]
+    println!("Creating video with {} text frames...", texts.len());
+
     let config = Config {
         voice: VoiceConfig {
             language: "en-GB".to_string(),
             gender: "male".to_string(),
             pitch: 0.5,
-            rate: 0.5,
+            rate: 0.55,
         },
         video: VideoConfig {},
     };
 
-    println!("Creating video...");
-
-    create_video(texts);
+    create_video(texts, &config);
 }
 
 fn get_reddit_texts() -> Vec<String> {
     let subreddit = inquire::Text::new("Subreddit:")
+        .with_default("AskReddit")
         .prompt()
         .expect("Error reading input");
 
@@ -47,21 +47,28 @@ fn get_reddit_texts() -> Vec<String> {
     }
     .to_string();
 
-    println!("Fetching posts...");
-    let posts = reddit::get_posts(&subreddit, &sort, &time).expect("Failed to fetch posts");
+    let get_posts = || {
+        println!("Fetching posts...");
+        reddit::get_posts(&subreddit, &sort, &time).expect("Failed to fetch posts")
+    };
 
-    let content_type = inquire::Select::new("Posts or comments?", vec!["posts", "comments"])
+    let content_type = inquire::Select::new("Posts or comments?", vec!["comments", "posts"])
         .prompt()
         .expect("Error reading input");
 
     let texts: Vec<String> = if content_type == "posts" {
-        posts.to_text_frames()
+        get_posts().to_text_frames()
     } else {
+        let posts = get_posts();
+
         let post_title_options = posts.clone().into_iter().map(|post| post.title).collect();
 
-        let post_title = inquire::Select::new("Comments of which post?", post_title_options)
-            .prompt()
-            .expect("Error reading input");
+        let post_title = inquire::Select::new(
+            "Which post to take comments from? (scroll for more)",
+            post_title_options,
+        )
+        .prompt()
+        .expect("Error reading input");
 
         let mut permalink = None;
         for post in posts {
@@ -75,8 +82,20 @@ fn get_reddit_texts() -> Vec<String> {
         println!("Fetching comments...");
         let comments = reddit::get_comments(&permalink).expect("Failed to fetch comments");
 
-        comments.to_text_frames()
+        let mut frames = vec![post_title];
+        frames.append(&mut comments.to_text_frames());
+        frames
     };
 
-    texts
+    println!("Text frames: {}", texts.len());
+
+    let frames_limit = inquire::Text::new("Limit text frames count?")
+        .prompt()
+        .expect("Error reading input");
+
+    if let Ok(frames_limit) = frames_limit.parse::<usize>() {
+        texts.into_iter().take(frames_limit).collect()
+    } else {
+        texts
+    }
 }
