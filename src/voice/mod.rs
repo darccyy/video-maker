@@ -12,7 +12,19 @@ pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Result<Vec<u8>, reqw
 
     let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 
-    let response = reqwest::blocking::get(&url)?;
+    let mut i = 0;
+    let response = loop {
+        i += 1;
+
+        match reqwest::blocking::get(&url) {
+            Ok(response) => break response,
+            Err(err) => eprintln!("[warning] (Attempt {i}): Failed to fetch - {err:?}"),
+        };
+
+        if i >= 20 {
+            panic!("Failed to fetch. Maximum attempts reached.");
+        }
+    };
 
     let bytes = response.bytes()?;
 

@@ -15,7 +15,7 @@ fn main() {
             language: "en-GB".to_string(),
             gender: "male".to_string(),
             pitch: 0.5,
-            rate: 0.55,
+            rate: 0.5,
         },
         video: VideoConfig {},
     };

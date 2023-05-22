@@ -3,7 +3,7 @@ mod json;
 use self::json::{post, subreddit};
 use crate::ToTextFrames;
 
-const MAX_TEXT_LENGTH: usize = 300;
+const MAX_TEXT_LENGTH: usize = 400;
 const MAX_ITEM_COUNT: usize = 1000;
 
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5666.197 Safari/537.36";
@@ -76,7 +76,10 @@ pub fn get_posts(subreddit: &str, sort: &str, time: &str) -> Result<Vec<Post>, r
 }
 
 pub fn get_comments(post_permalink: &str) -> Result<Vec<Comment>, reqwest::Error> {
-    let url = format!("https://reddit.com/{}.json", post_permalink);
+    let url = format!(
+        "https://reddit.com/{}.json?limit=10000&depth=1",
+        post_permalink
+    );
 
     let client = reqwest::blocking::Client::builder()
         .user_agent(USER_AGENT)
