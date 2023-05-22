@@ -1,28 +1,34 @@
 pub mod config;
 pub mod paths;
 
-mod reddit;
+pub mod reddit;
 mod video;
 mod voice;
 
-use config::Config;
 use paths::{check_assets_input, clean_assets_output};
 use voice::{get_audio_duration, get_voice_bytes};
 
 use std::{fs, process::Command, time::Duration};
 
-pub fn create_video(config: Config) {
+pub trait ToTextFrames {
+    fn to_text_frames(self) -> Vec<String>;
+}
+
+impl<T: ToTextFrames> ToTextFrames for Vec<T> {
+    fn to_text_frames(self) -> Vec<String> {
+        self.into_iter()
+            .map(ToTextFrames::to_text_frames)
+            .flatten()
+            .collect()
+    }
+}
+
+pub fn create_video(texts: Vec<String>) {
     // Clean and check assets directory
     clean_assets_output().expect("Failed to clean assets output");
     if let Some(missing_file) = check_assets_input().expect("Failed to check missing input files") {
         panic!("Input files/folders missing: {}", missing_file);
     };
-
-    println!("\n======== CONTENT ========");
-
-    let texts = reddit::get_posts(config.reddit).expect("Error fetching texts");
-
-    println!("Successfully fetched content - {} lines", texts.len());
 
     println!("\n======== VOICE ==========");
 

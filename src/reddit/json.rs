@@ -1,22 +1,53 @@
-use serde::Deserialize;
+pub mod subreddit {
+    use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct Subreddit {
-    pub data: SubredditData,
+    #[derive(Debug, Deserialize)]
+    pub struct Response {
+        pub data: Data,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Data {
+        pub children: Vec<Child>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Child {
+        pub data: ChildData,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChildData {
+        pub title: String,
+        pub selftext: String,
+        pub permalink: String,
+    }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SubredditData {
-    pub children: Vec<Child>,
-}
+pub mod post {
+    use super::subreddit;
+    use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct Child {
-    pub data: ChildData,
-}
+    #[derive(Debug, Deserialize)]
+    pub struct Response(pub subreddit::Response, pub Comments);
 
-#[derive(Debug, Deserialize)]
-pub struct ChildData {
-    pub title: String,
-    pub selftext: String,
+    #[derive(Debug, Deserialize)]
+    pub struct Comments {
+        pub data: Data,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Data {
+        pub children: Vec<Child>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Child {
+        pub data: ChildData,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct ChildData {
+        pub body: Option<String>,
+    }
 }
