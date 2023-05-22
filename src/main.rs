@@ -6,11 +6,7 @@ use video_maker::ToTextFrames;
 fn main() {
     println!("====== VIDEO-MAKER ======");
 
-    // let texts = get_reddit_texts();
-    let texts: Vec<_> = vec!["some text", "another text", "blah blah"]
-        .iter()
-        .map(|x| x.to_string())
-        .collect();
+    let texts = get_reddit_texts();
 
     println!("Creating video with {} text frames...", texts.len());
 
@@ -27,7 +23,6 @@ fn main() {
     create_video(texts, &config);
 }
 
-#[allow(dead_code)]
 fn get_reddit_texts() -> Vec<String> {
     let subreddit = inquire::Text::new("Subreddit:")
         .with_default("AskReddit")
