@@ -2,7 +2,9 @@ use std::{io::Cursor, time::Duration};
 
 use crate::config::VoiceConfig;
 
-pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Result<Vec<u8>, reqwest::Error> {
+type Return = Result<(Vec<u8>, Duration), Box<dyn std::error::Error>>;
+
+pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Return {
     let VoiceConfig {
         language,
         gender,
@@ -12,23 +14,34 @@ pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Result<Vec<u8>, reqw
 
     let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 
-    let mut i = 0;
-    let response = loop {
-        i += 1;
+    let attempt = || -> Return {
+        let response = reqwest::blocking::get(&url)?;
 
-        match reqwest::blocking::get(&url) {
-            Ok(response) => break response,
-            Err(err) => eprintln!("[warning] (Attempt {i}): Failed to fetch - {err:?}"),
-        };
+        let bytes = response.bytes()?;
 
-        if i >= 20 {
-            panic!("Failed to fetch. Maximum attempts reached.");
-        }
+        let duration = get_audio_duration(&bytes)?;
+
+        Ok((bytes.to_vec(), duration))
     };
 
-    let bytes = response.bytes()?;
+    const MAX_ATTEMPTS: usize = 10;
 
-    Ok(bytes.to_vec())
+    let mut i = 0;
+    loop {
+        i += 1;
+
+        match attempt() {
+            Ok(value) => return Ok(value),
+
+            Err(err) => {
+                eprintln!("[warning] (Attempt {i}/{MAX_ATTEMPTS}): Failed to fetch - {err:?}");
+
+                if i >= MAX_ATTEMPTS {
+                    return Err(err);
+                }
+            }
+        };
+    }
 }
 
 pub fn get_audio_duration(bytes: &[u8]) -> Result<Duration, mp3_duration::MP3DurationError> {

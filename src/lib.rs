@@ -7,7 +7,7 @@ mod voice;
 
 use config::Config;
 use paths::{check_assets_input, clean_assets_output};
-use voice::{get_audio_duration, get_voice_bytes};
+use voice::get_voice_bytes;
 
 use std::{fs, process::Command, time::Duration};
 
@@ -36,14 +36,13 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
     let mut voices = Vec::new();
     let mut duration_total = Duration::ZERO;
     for (i, text) in texts.iter().enumerate() {
-        println!("Creating voice file for '{}'", text);
+        println!("Creating voice line: {}/{}", i + 1, texts.len());
 
-        let bytes = get_voice_bytes(&text, &config.voice).expect("Error fetching voice audio");
+        let (bytes, duration) =
+            get_voice_bytes(&text, &config.voice).expect("Error fetching voice audio");
 
         let path = format!("{}/{}.mp3", paths::VOICES, i);
         fs::write(&path, &bytes).expect("Failed to write audio file of voice");
-
-        let duration = get_audio_duration(&bytes).expect("Failed to parse audio duration");
 
         voices.push((path, duration, text));
 
@@ -52,38 +51,39 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
 
     println!("\n======== COMMAND ========");
 
+    // Create ffmpeg command, with some basic params, and input video
     let mut cmd = Command::new("ffmpeg");
     cmd.args(["-loglevel", "error", "-i", paths::BG]);
 
+    // Add audio inputs
     for (path, ..) in &voices {
         cmd.args(["-i", &path]);
     }
 
-    cmd.args(["-map", "0:v"]);
-    for (i, _) in voices.iter().enumerate() {
-        cmd.args(["-map", &format!("{}:a", i + 1)]);
-    }
-
+    // Create filters
+    // Audio concatenation
     let mut filter = String::new();
+    let mut duration_total = 0.0;
     for (i, _) in voices.iter().enumerate() {
         filter.push_str(&format!("[{}:a]", i + 1));
     }
-    cmd.args([
-        "-filter_complex",
-        &format!("{}concat=n={}:v=0:a=1", filter, voices.len()),
-    ]);
-
-    let mut filters = Vec::new();
-    let mut duration_total = 0.0;
-    for (_, duration, text) in &voices {
+    filter.push_str(&format!("concat=n={}:v=0:a=1;", voices.len()));
+    // Drawtext video filters
+    for (i, (_, duration, text)) in voices.iter().enumerate() {
         let start = duration_total;
         duration_total += duration.as_secs_f32();
         let end = duration_total;
 
-        filters.push(video::text_filter(text, start, end));
+        if i > 0 {
+            filter.push(',');
+        }
+        filter.push_str(&video::text_filter(text, start, end));
     }
-    cmd.args(["-vf", &filters.join(",")]);
+    // Save to file and pass filepath as argument
+    fs::write(paths::FILTER, filter).expect("Failed to write temporary filter script");
+    cmd.args(["-filter_complex_script", paths::FILTER]);
 
+    // Trim video to duration of all audio
     cmd.args([
         "-ss",
         "00:00:00",
@@ -91,11 +91,11 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
         &video::timestamp_from_seconds(duration_total + 2.0),
     ]);
 
+    // Lossless video, without copy
     cmd.args(["-q:v", "0"]);
-    // cmd.args(["-c:v", "copy"]);
+    // Output video
     cmd.arg(paths::FINAL);
 
-    println!("{:#?}", cmd);
     println!(
         "ffmpeg {}",
         cmd.get_args()
