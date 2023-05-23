@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::{io::Cursor, time::Duration};
 
 use crate::config;
@@ -11,6 +12,8 @@ pub fn get_voice_bytes(text: &str, config: &config::Voice) -> BytesAndDuration {
         pitch,
         rate,
     } = config;
+
+    let text = remove_emojis(text);
 
     let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 
@@ -44,6 +47,11 @@ pub fn get_voice_bytes(text: &str, config: &config::Voice) -> BytesAndDuration {
             }
         };
     }
+}
+
+fn remove_emojis(text: &str) -> String {
+    let emoji_regex = Regex::new(r#"\p{Emoji}"#).unwrap();
+    emoji_regex.replace_all(text, "").to_string()
 }
 
 pub fn get_audio_duration(bytes: &[u8]) -> Result<Duration, mp3_duration::MP3DurationError> {

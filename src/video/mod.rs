@@ -37,39 +37,69 @@ fn sanitize_shell_characters(text: &str) -> String {
         .replace('&', "\\&")
 }
 
-pub fn text_filter(text: &str, start: f32, end: f32) -> String {
-    // Replace special characters with escaped version
-    let text = sanitize_shell_characters(text);
-    // Wrap text to max width
-    let text = wrap_text(&text, 60);
+#[derive(Debug)]
+pub struct DrawtextOptions {
+    pub font: String,
+    pub fontcolor: String,
+    pub fontsize: u32,
+    pub box_: bool,
+    pub boxborderw: usize,
+    pub boxcolor: String,
+    pub x: String,
+    pub y: String,
+}
 
-    let options = [
-        // Font settings
-        ("font", "'Serif'"),
-        ("fontcolor", "white"),
-        ("fontsize", "42"),
-        // Text background
-        ("box", "1"),
-        ("boxborderw", "12"),
-        ("boxcolor", "black@0.8"),
-        // Center text on canvas
-        ("x", "(w-text_w)/2"),
-        ("y", "(h-text_h)/2"),
-        // Timing to display text
-        ("enable", &format!("'between(t, {start}, {end})'")),
-        // Prevent special characters in text from breaking command
-        ("expansion", "none"),
-        // Text to render
-        ("text", &format!("'{}'", text)),
-    ];
+impl Default for DrawtextOptions {
+    fn default() -> Self {
+        Self {
+            font: "Sans".to_string(),
+            fontcolor: "white".to_string(),
+            fontsize: 32,
+            box_: false,
+            boxborderw: 15,
+            boxcolor: "black@0.8".to_string(),
+            x: "(w-text_w)/2".to_string(),
+            y: "(h-text_h)/2".to_string(),
+        }
+    }
+}
 
-    // Convert to `key=value` syntax
-    let options: Vec<_> = options
-        .into_iter()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect();
-    // Create filter
-    format!("drawtext={}", options.join(":"))
+impl DrawtextOptions {
+    pub fn apply_to_text(&self, text: &str, start: f32, end: f32) -> String {
+        // Replace special characters with escaped version
+        let text = sanitize_shell_characters(text);
+        // Wrap text to max width
+        let text = wrap_text(&text, 60);
+
+        let options = [
+            // Font settings
+            ("font", &format!("{}", self.font)),
+            ("fontcolor", &self.fontcolor),
+            ("fontsize", &self.fontsize.to_string()),
+            // Text background
+            ("box", &if self.box_ { "1" } else { "0" }.to_string()),
+            ("boxborderw", &self.boxborderw.to_string()),
+            ("boxcolor", &self.boxcolor),
+            // Center text on canvas
+            ("x", &self.x),
+            ("y", &self.y),
+            // Timing to display text
+            ("enable", &format!("'between(t, {start}, {end})'")),
+            // Prevent special characters in text from breaking command
+            ("expansion", &"none".to_string()),
+            // Text to render
+            ("text", &format!("'{}'", text)),
+        ];
+
+        // Convert to `key=value` syntax
+        let options: Vec<_> = options
+            .into_iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect();
+
+        // Create filter
+        format!("drawtext={}", options.join(":"))
+    }
 }
 
 /// Wrap text to fit within a maximum width (number of characters)

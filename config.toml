@@ -10,6 +10,6 @@ watermark = "awesome!"
 # subreddit = "askreddit"
 sort = "top"
 time = "month"
-# comments = true
-limit = 50
+comments = false
+limit = 3
 

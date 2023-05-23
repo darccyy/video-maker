@@ -1,5 +1,6 @@
 use std::fs;
 
+use video_maker::clean_assets_output;
 use video_maker::config;
 use video_maker::create_video;
 use video_maker::reddit;
@@ -7,6 +8,9 @@ use video_maker::ToTextFrames;
 
 fn main() {
     println!("====== VIDEO-MAKER ======");
+
+    // Clean and check assets directory
+    clean_assets_output().expect("Failed to clean assets output");
 
     let config_filename = "./config.toml";
 
@@ -24,9 +28,11 @@ fn main() {
         choose_post_for_comments(&posts)
     };
 
+    let texts = texts.into_iter().filter(|text| !text.is_empty());
+
     let texts = match config.reddit.limit {
-        Some(limit) => texts.into_iter().take(limit).collect(),
-        None => texts,
+        Some(limit) => texts.take(limit).collect(),
+        None => texts.collect(),
     };
 
     println!("{:#?}", texts);

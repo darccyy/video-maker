@@ -5,11 +5,14 @@ pub mod reddit;
 mod video;
 mod voice;
 
+pub use paths::clean_assets_output;
+
 use config::Config;
-use paths::clean_assets_output;
 use voice::get_voice_bytes;
 
 use std::{fs, process::Command, time::Duration};
+
+use crate::video::DrawtextOptions;
 
 pub trait ToTextFrames {
     fn to_text_frames(self) -> Vec<String>;
@@ -25,9 +28,6 @@ impl<T: ToTextFrames> ToTextFrames for Vec<T> {
 }
 
 pub fn create_video(texts: Vec<String>, config: &Config) {
-    // Clean and check assets directory
-    clean_assets_output().expect("Failed to clean assets output");
-
     println!("\n======== VOICE ==========");
 
     let mut voices = Vec::new();
@@ -69,6 +69,11 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
     }
     filter.push_str(&format!("concat=n={}:v=0:a=1;", voices.len()));
     // Drawtext video filters
+    let drawtext_options = DrawtextOptions {
+        font: "Serif".to_string(),
+        box_: true,
+        ..Default::default()
+    };
     for (i, (_, duration, text)) in voices.iter().enumerate() {
         let start = duration_total;
         duration_total += duration.as_secs_f32();
@@ -77,7 +82,16 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
         if i > 0 {
             filter.push(',');
         }
-        filter.push_str(&video::text_filter(text, start, end));
+        filter.push_str(&drawtext_options.apply_to_text(text, start, end));
+    }
+    // Apply watermark
+    if let Some(watermark) = &config.source.watermark {
+        let drawtext_options = DrawtextOptions {
+            x: "w*0.8-text_w/2".to_string(),
+            y: "h*0.3-text_h/2".to_string(),
+            ..Default::default()
+        };
+        filter.push_str(&drawtext_options.apply_to_text(watermark, 0.0, duration_total));
     }
     // Save to file and pass filepath as argument
     fs::write(paths::FILTER, filter).expect("Failed to write temporary filter script");

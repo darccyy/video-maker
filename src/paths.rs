@@ -2,23 +2,10 @@ use std::{fs, io, path::Path};
 
 use const_format::concatcp;
 
-/// Create constants for paths
-macro_rules! define_paths {
-    ( $(
-        $name: ident =
-            $($parent: ident /)? $file: literal
-    )* ) => { $(
-        /// Constant path for assets file or folder
-        pub const $name: &str =
-            concatcp!( $($parent, "/", )? $file );
-    )* };
-}
+const TEMP: &str = concatcp!("/tmp/", env!("CARGO_PKG_NAME"));
 
-define_paths!(
-    TEMP   = "/tmp/video-maker"
-    VOICES = TEMP/"voices"
-    FILTER = TEMP/"filter.txt"
-);
+pub const VOICES: &str = concatcp!(TEMP, "/voices");
+pub const FILTER: &str = concatcp!(TEMP, "/filter.txt");
 
 /// Folders that may already exist, they should be recreated empty
 pub fn clean_assets_output() -> Result<(), io::Error> {
