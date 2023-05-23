@@ -1,7 +1,7 @@
 mod json;
 
 use self::json::{post, subreddit};
-use crate::ToTextFrames;
+use crate::{config, ToTextFrames};
 
 const MAX_TEXT_LENGTH: usize = 400;
 const MAX_ITEM_COUNT: usize = 1000;
@@ -32,8 +32,15 @@ impl ToTextFrames for Comment {
     }
 }
 
-pub fn get_posts(subreddit: &str, sort: &str, time: &str) -> Result<Vec<Post>, reqwest::Error> {
+pub fn get_posts(config: &config::Reddit) -> Result<Vec<Post>, reqwest::Error> {
     let count = 100;
+
+    let config::Reddit {
+        subreddit,
+        sort,
+        time,
+        ..
+    } = config;
 
     let url = format!("https://reddit.com/r/{subreddit}/{sort}.json?t={time}&count={count}");
 

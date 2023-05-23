@@ -1,0 +1,14 @@
+[video]
+out = "video.mp4"
+
+[source]
+background = "source/background.mp4"
+watermark = "awesome!"
+
+[reddit]
+# subreddit = "askreddit"
+sort = "top"
+time = "month"
+# comments = true
+limit = 5
+

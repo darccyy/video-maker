@@ -1,11 +1,11 @@
 use std::{io::Cursor, time::Duration};
 
-use crate::config::VoiceConfig;
+use crate::config;
 
-type Return = Result<(Vec<u8>, Duration), Box<dyn std::error::Error>>;
+type BytesAndDuration = Result<(Vec<u8>, Duration), Box<dyn std::error::Error>>;
 
-pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Return {
-    let VoiceConfig {
+pub fn get_voice_bytes(text: &str, config: &config::Voice) -> BytesAndDuration {
+    let config::Voice {
         language,
         gender,
         pitch,
@@ -14,7 +14,7 @@ pub fn get_voice_bytes(text: &str, config: &VoiceConfig) -> Return {
 
     let url = format!("https://texttospeech.responsivevoice.org/v1/text:synthesize?text={text}&lang={language}&engine=g1&name=&pitch={pitch}&rate={rate}&volume=1&key=kvfbSITh&gender={gender}");
 
-    let attempt = || -> Return {
+    let attempt = || -> BytesAndDuration {
         let response = reqwest::blocking::get(&url)?;
 
         let bytes = response.bytes()?;
