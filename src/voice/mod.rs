@@ -34,7 +34,9 @@ pub fn get_voice_bytes(text: &str, config: &config::Voice) -> BytesAndDuration {
             Ok(value) => return Ok(value),
 
             Err(err) => {
-                eprintln!("[warning] (Attempt {i}/{MAX_ATTEMPTS}): Failed to fetch - {err:?}");
+                eprintln!(
+                    "[warning] (Attempt {i}/{MAX_ATTEMPTS}): Failed to create voice line - {err:?}"
+                );
 
                 if i >= MAX_ATTEMPTS {
                     return Err(err);

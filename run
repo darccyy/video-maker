@@ -1,6 +1,6 @@
 #!/bin/sh
 
-out='assets/out/final.mp4'
+out='video.mp4'
 
 cargo run &&
 

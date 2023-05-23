@@ -6,7 +6,7 @@ mod video;
 mod voice;
 
 use config::Config;
-use paths::{check_assets_input, clean_assets_output};
+use paths::clean_assets_output;
 use voice::get_voice_bytes;
 
 use std::{fs, process::Command, time::Duration};
@@ -27,9 +27,6 @@ impl<T: ToTextFrames> ToTextFrames for Vec<T> {
 pub fn create_video(texts: Vec<String>, config: &Config) {
     // Clean and check assets directory
     clean_assets_output().expect("Failed to clean assets output");
-    if let Some(missing_file) = check_assets_input().expect("Failed to check missing input files") {
-        panic!("Input files/folders missing: {}", missing_file);
-    };
 
     println!("\n======== VOICE ==========");
 
@@ -53,7 +50,7 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
 
     // Create ffmpeg command, with some basic params, and input video
     let mut cmd = Command::new("ffmpeg");
-    cmd.args(["-loglevel", "error", "-i", paths::BG]);
+    cmd.args(["-loglevel", "error", "-i", &config.source.background]);
 
     // Add audio inputs
     for (path, ..) in &voices {
@@ -94,7 +91,7 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
     // Lossless video, without copy
     cmd.args(["-q:v", "0"]);
     // Output video
-    cmd.arg(paths::FINAL);
+    cmd.arg(&config.video.out);
 
     println!(
         "ffmpeg {}",

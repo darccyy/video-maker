@@ -33,7 +33,7 @@ impl ToTextFrames for Comment {
 }
 
 pub fn get_posts(config: &config::Reddit) -> Result<Vec<Post>, reqwest::Error> {
-    let count = 100;
+    let count = 1000;
 
     let config::Reddit {
         subreddit,
