@@ -41,6 +41,7 @@ fn choose_post_for_comments(posts: &[reddit::Post]) -> Vec<String> {
         "Which post to take comments from? (scroll for more)",
         post_title_options,
     )
+    .with_page_size(12)
     .prompt()
     .expect("Error reading input");
 

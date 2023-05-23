@@ -41,17 +41,22 @@ impl Builder for ConfigBuilder {
 #[derive(Debug)]
 pub struct Video {
     pub out: String,
+    pub overwrite: bool,
 }
 
 #[derive(Debug, Deserialize)]
 struct VideoBuilder {
     out: String,
+    overwrite: Option<bool>,
 }
 
 impl Builder for VideoBuilder {
     type Output = Video;
     fn build(self) -> Self::Output {
-        Self::Output { out: self.out }
+        Self::Output {
+            out: self.out,
+            overwrite: self.overwrite.unwrap_or(false),
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 [video]
 out = "video.mp4"
+overwrite = true
 
 [source]
 background = "assets/background.mp4"
@@ -10,6 +11,5 @@ watermark = "awesome!"
 sort = "top"
 time = "month"
 # comments = true
-# limit = 5
-a = 123
+limit = 50
 

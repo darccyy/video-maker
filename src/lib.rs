@@ -50,6 +50,9 @@ pub fn create_video(texts: Vec<String>, config: &Config) {
 
     // Create ffmpeg command, with some basic params, and input video
     let mut cmd = Command::new("ffmpeg");
+    if config.video.overwrite {
+        cmd.arg("-y");
+    }
     cmd.args(["-loglevel", "error", "-i", &config.source.background]);
 
     // Add audio inputs
